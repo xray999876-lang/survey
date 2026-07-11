@@ -265,23 +265,23 @@
       <div class="field">
         <label class="field-label">ผู้รับบริการ</label>
         <div class="pill-group" data-field="serviceType">
-          <label class="pill"><input type="radio" name="serviceType" value="ผู้ป่วยใน"><span>ผู้ป่วยใน</span></label>
-          <label class="pill"><input type="radio" name="serviceType" value="ผู้ป่วยนอก"><span>ผู้ป่วยนอก</span></label>
+          <label class="pill"><input type="radio" name="serviceType" value="ผู้ป่วยใน" required><span>ผู้ป่วยใน</span></label>
+          <label class="pill"><input type="radio" name="serviceType" value="ผู้ป่วยนอก" required><span>ผู้ป่วยนอก</span></label>
         </div>
       </div>
 
       <div class="field">
         <label class="field-label">เพศ</label>
         <div class="pill-group" data-field="gender">
-          <label class="pill"><input type="radio" name="gender" value="ชาย"><span>ชาย</span></label>
-          <label class="pill"><input type="radio" name="gender" value="หญิง"><span>หญิง</span></label>
+          <label class="pill"><input type="radio" name="gender" value="ชาย" required><span>ชาย</span></label>
+          <label class="pill"><input type="radio" name="gender" value="หญิง" required><span>หญิง</span></label>
         </div>
       </div>
 
       <div class="field">
         <label class="field-label" for="ageRange">อายุ</label>
         <div class="select-wrap">
-          <select id="ageRange" name="ageRange">
+          <select id="ageRange" name="ageRange" required>
             <option value="">-- เลือก --</option>
             <option value="ต่ำกว่า 20 ปี">ต่ำกว่า 20 ปี</option>
             <option value="20 - 30 ปี">20 - 30 ปี</option>
@@ -296,7 +296,7 @@
       <div class="field">
         <label class="field-label" for="education">ระดับการศึกษา</label>
         <div class="select-wrap">
-          <select id="education" name="education">
+          <select id="education" name="education" required>
             <option value="">-- เลือก --</option>
             <option value="ต่ำกว่าปริญญาตรี">ต่ำกว่าปริญญาตรี</option>
             <option value="ปริญญาตรี">ปริญญาตรี</option>
@@ -308,7 +308,7 @@
       <div class="field">
         <label class="field-label" for="personType">ประเภทบุคคล</label>
         <div class="select-wrap">
-          <select id="personType" name="personType">
+          <select id="personType" name="personType" required>
             <option value="">-- เลือก --</option>
             <option value="บุคคลทั่วไป">บุคคลทั่วไป</option>
             <option value="นิติบุคคล">นิติบุคคล</option>
@@ -384,7 +384,13 @@
 <script>
 // ===== CONFIG =====
 // วาง Web app URL จาก Google Apps Script ตรงนี้ หลัง Deploy แล้ว
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNasAGAhoRlTIGkGmQgfQoavEzKe5wQXC0EIxtPxNdLLGmgm-VdgDMHv7nwvDxEO3_/exec";
+// สำคัญ: ถ้า URL นี้เคยหลุดเป็น public มาก่อน (เช่นเคยอยู่ใน public repo)
+// แนะนำให้สร้าง deployment ใหม่ใน Apps Script เพื่อได้ URL ใหม่ แล้วนำมาแทนที่ตรงนี้
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEnFdlftt8Yc6qG163ZGF1EiiTWak8239BGThXjwakKVOlsgtwqJCXhKVoYulfSPqx/exec";
+
+// ต้องตรงกับ SHARED_SECRET ใน Code.gs ฝั่ง backend
+// (กันไม่ให้คนอื่นยิง POST ปลอมเข้ามาสแปมชีต แม้จะรู้ SCRIPT_URL ก็ตาม)
+const SUBMIT_TOKEN = "ptr-xray-survey-8f3k2m9qL7";
 
 // ===== Build 5-point chip rows (5,4,3,2,1 order, matching the paper form) =====
 document.querySelectorAll('.rate-q').forEach(block=>{
@@ -394,7 +400,7 @@ document.querySelectorAll('.rate-q').forEach(block=>{
     const chip = document.createElement('label');
     chip.className = 'chip';
     chip.dataset.v = i;
-    chip.innerHTML = `<input type="radio" name="${qKey}" value="${i}"><span>${i}</span>`;
+    chip.innerHTML = `<input type="radio" name="${qKey}" value="${i}" required><span>${i}</span>`;
     row.appendChild(chip);
   }
 });
@@ -404,11 +410,24 @@ const submitBtn = document.getElementById('submitBtn');
 
 form.addEventListener('submit', function(e){
   e.preventDefault();
+
+  // เช็คว่าตอบครบตามที่ browser validate (required) หรือยัง
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  // เช็คว่าออนไลน์อยู่ไหมก่อนส่ง กันกรณีเน็ตหลุดแล้วเข้าใจผิดว่าส่งสำเร็จ
+  if (!navigator.onLine) {
+    alert("ไม่มีสัญญาณอินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองส่งอีกครั้ง");
+    return;
+  }
+
   const data = new FormData(form);
   submitBtn.disabled = true;
   submitBtn.textContent = "กำลังส่ง...";
 
-  const payload = {};
+  const payload = { _token: SUBMIT_TOKEN };
   for (const [key, value] of data.entries()) payload[key] = value;
 
   fetch(SCRIPT_URL, {
@@ -418,13 +437,19 @@ form.addEventListener('submit', function(e){
     body: JSON.stringify(payload)
   })
   .then(()=> showThanks())
-  .catch(()=> showThanks()); // no-cors gives no readable response either way
+  .catch(()=> showError()); // เกิดเฉพาะกรณีเครือข่ายล้มเหลวจริง ๆ (no-cors ปิดกั้น response ปกติอยู่แล้ว)
 });
 
 function showThanks(){
   document.getElementById('formWrap').classList.add('hide');
   document.getElementById('thanksWrap').classList.add('show');
   window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function showError(){
+  submitBtn.disabled = false;
+  submitBtn.textContent = "ส่งแบบสอบถาม";
+  alert("ส่งแบบสอบถามไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง");
 }
 </script>
 </body>
