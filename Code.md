@@ -19,7 +19,7 @@
  *   deployment ใหม่ (จะได้ URL ใหม่) แล้วเลิกใช้ของเก่า
  */
 
-var SHARED_SECRET = "เปลี่ยนเป็นข้อความลับของคุณ"; // ต้องตรงกับ SUBMIT_TOKEN ใน index.html
+var SHARED_SECRET = "ptr-xray-survey-8f3k2m9qL7"; // ต้องตรงกับ SUBMIT_TOKEN ใน index.html
 
 function doPost(e) {
   try {
